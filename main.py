@@ -6,6 +6,19 @@ import pandas as pd
 import config
 from git import Repo
 
+def commit(file):
+
+    repo = Repo(config.repo)
+    index = repo.index
+    
+    index.add(items=file)
+
+    index.commit(message=f"Auto-committed {date.month-1 if date.month != 1 else 12}/{str(date.year if date.month != 1 else date.year-1)[-2:]} pomodoro report")
+
+    origin = repo.remote(name='origin')
+    origin.push()
+
+
 def seasonal(file):
 
     pdf = Pomodoro_Constructor(file, "season")
@@ -105,24 +118,18 @@ Tommaso Crippa"""
     #             sender, receiver, 
     #             password, sender_name, file)
 
+    commit(file)
+
 if __name__ == "__main__":
 
-    file = "C:/Users/cripp/Dropbox/Registrazioni-Pomodori.xlsx"
+    file = config.excel
     date = datetime.now()
 
-    monthly(file)
-    # if date.day == 1:
-    #     monthly(file)
-    #     if date.month == 1:
-    #         yearly(file)
-    # else:
-    #     seasonal(file)
+    if date.day == 1:
+        monthly(file)
+        if date.month == 1:
+            yearly(file)
+    else:
+        seasonal(file)
     
 
-    repo = Repo(config.repo)
-    index = repo.index
-    
-    repo.git.add(update=True)
-
-    repo.git.commit(message=f"Auto-committed {date.month-1 if date.month != 1 else 12}/{date.year if date.month != 1 else date.year-1} pomodoro report")
-    repo.remotes.origin.push(repo.head)
