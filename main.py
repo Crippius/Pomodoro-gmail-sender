@@ -4,6 +4,7 @@ from Pomodoro_Constructor import FULL, HALF, HEIGHT, LEFT_PLOT, RIGHT_PLOT, WIDT
 from send_email import send_email
 import pandas as pd
 import config
+from git import Repo
 
 def seasonal(file):
 
@@ -99,20 +100,28 @@ Tommaso Crippa"""
     file = f"pdfs/Pomodoro Report - {pdf.month} {pdf.year}.pdf"
     receivers = config.receivers
 
-    for receiver in receivers:
-        send_email(subject, body, 
-                sender, receiver, 
-                password, sender_name, file)
+    # for receiver in receivers:
+    #     send_email(subject, body, 
+    #             sender, receiver, 
+    #             password, sender_name, file)
 
 if __name__ == "__main__":
 
     file = "C:/Users/cripp/Dropbox/Registrazioni-Pomodori.xlsx"
     date = datetime.now()
 
-    if date.day == 1:
-        monthly(file)
-        if date.month == 1:
-            yearly(file)
-    else:
-        seasonal(file)
-            
+    # if date.day == 1:
+    #     monthly(file)
+    #     if date.month == 1:
+    #         yearly(file)
+    # else:
+    #     seasonal(file)
+    
+
+    repo = Repo(config.repo)
+    index = repo.index
+    
+    repo.git.add(update=True)
+
+    repo.git.commit(message=f"Auto-committed {date.month-1 if date.month != 1 else 12}/{date.year if date.month != 1 else date.year-1} pomodoro report")
+    repo.remotes.origin.push(repo.head)
