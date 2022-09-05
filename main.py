@@ -110,6 +110,7 @@ if __name__ == "__main__":
     file = "C:/Users/cripp/Dropbox/Registrazioni-Pomodori.xlsx"
     date = datetime.now()
 
+    monthly(file)
     # if date.day == 1:
     #     monthly(file)
     #     if date.month == 1:
