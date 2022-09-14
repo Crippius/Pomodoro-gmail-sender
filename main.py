@@ -50,6 +50,11 @@ def monthly(file, email=True):
     pdf.h1(WIDTH, x=15, y=40, txt=f"A {pdf.month} sono stati completati {num_pomodori} pomodori!")
     pdf.h2(WIDTH, x=15, y=58, txt=f"In media sono {avg} pomodori al giorno!")
 
+    ore = num_pomodori*25//60
+    minuti = num_pomodori*25%60
+    
+    pdf.h4(HALF, x=HALF, y=62, txt=f"Sono {ore} ore e {minuti} minuti!", align="R")
+
     pdf.plot_number_of_messages(x=LEFT_PLOT, y=80, w=FULL)
     
     pdf.image("images/quadrilatero.png", x=0, y=15+HEIGHT//2, w=WIDTH, h=HEIGHT//2)

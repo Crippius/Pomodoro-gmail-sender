@@ -291,6 +291,11 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.set_xy(0, -30)
         self.set_font_size(20)
         self.multi_cell(FULL, 10, "Tommaso Crippa\nThe Pomodoro Technique", align="R")
+        
+        self.set_xy(5+WIDTH//3, -20)
+        self.set_font_size(15)
+        self.cell(FULL, 10, "1 pomodoro == 25 minuti")
+
         self.set_text_color(0, 0, 0)
 
     
