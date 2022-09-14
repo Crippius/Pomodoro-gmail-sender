@@ -19,13 +19,14 @@ def commit(file):
     origin.push()
 
 
-def seasonal(file):
+def seasonal(file, email=True):
 
     pdf = Pomodoro_Constructor(file, "season")
     
     pdf.save()
 
-def yearly(file):
+
+def yearly(file, email=True):
 
     pdf = Pomodoro_Constructor(file, "year")
     
@@ -36,14 +37,14 @@ def yearly(file):
 
     pdf.save()
 
-def monthly(file):
+def monthly(file, email=True):
 
     pdf = Pomodoro_Constructor(file, "month")
 
     pdf.add_new_page("Pomodori completati")
 
     num_pomodori = sum(pdf.df.pomodori[pdf.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{pdf.month_num}-01-{pdf.year}')])
-    num_giorni = len(pd.date_range(f"{pdf.month_num}-01-{pdf.year}", f"{pdf.month_num}-{monthrange(pdf.year, pdf.month_num)[1]}-{pdf.year}", freq="D"))
+    num_giorni = len(pd.date_range(f"{pdf.month_num}-01-{pdf.year}", f"{pdf.month_num}-{pdf.last_day}-{pdf.year}", freq="D"))
     avg = round(num_pomodori/num_giorni, 2)
 
     pdf.h1(WIDTH, x=15, y=40, txt=f"A {pdf.month} sono stati completati {num_pomodori} pomodori!")
@@ -60,13 +61,14 @@ def monthly(file):
     num_giorni_last = len(pd.date_range(f"{last}-01-{pdf.year}", f"{last}-{monthrange(pdf.year, (last)%13)[1]}-{pdf.year}", freq="D"))
     avg_last = round(num_pomodori_last/num_giorni_last, 2)
 
-    pdf.h3(WIDTH//2, x=HALF+15, y=175, txt=f"{num_pomodori-num_pomodori_last} in {'meno' if num_pomodori-num_pomodori_last<0 else 'più'} dello scorso mese")
-    pdf.h3(WIDTH//2, x=HALF+15, y=190, txt=f"({avg-avg_last} pomodori al giorno)")
+    pdf.h3(WIDTH//2, x=HALF+15, y=175, txt=f"{'+' if num_pomodori-num_pomodori_last > 0 else '-'}{abs(num_pomodori-num_pomodori_last)} in {'meno' if num_pomodori-num_pomodori_last<0 else 'più'} dello scorso mese")
+    pdf.h3(WIDTH//2, x=HALF+15, y=190, txt=f"({'+' if num_pomodori-num_pomodori_last > 0 else '-'}{abs(avg-avg_last)} pomodori al giorno)")
 
-    start, end, days = pdf.best_streak(x=RIGHT_PLOT, y=210, w=HALF)
-    
-    pdf.h4(WIDTH//2, x=15, y=249, txt=f"Migliore streak di questo mese: {days} giorni")
-    pdf.h4(WIDTH//2, x=15, y=259, txt=f"Durata dal {start[1]} al {end[1]} {pdf.month}!")
+    this_year, last_year = pdf.confront_months(x=RIGHT_PLOT, y=210, w=HALF)
+
+
+    pdf.h3(HALF-20, x=15, y=249, txt=f"{'+' if this_year-last_year > 0 else '-'}{abs(this_year-last_year)} in {'meno' if this_year-last_year<0 else 'più'} dello scorso anno", align="R")
+    pdf.h3(HALF-20, x=15, y=259, txt=f"({'+' if this_year-last_year > 0 else '-'}{round(abs((this_year/pdf.last_day)-(last_year/pdf.last_day)), 2)} pomodori al giorno)", align="R")
     
     pdf.add_new_page("Attività del mese")
 
@@ -90,6 +92,9 @@ def monthly(file):
     
     pdf.save()
 
+    if not email:
+        return
+
     txt = ""
     if avg < 1:
         txt = "In questo mese si poteva fare di meglio..."
@@ -111,12 +116,12 @@ Tommaso Crippa"""
     password = config.api_key
     sender_name = config.name
     file = f"pdfs/Pomodoro Report - {pdf.month} {pdf.year}.pdf"
-    receivers = config.receivers
+    receivers = config.receivers if date.day == 1 else [config.receivers[0]] # To avoid sending emails to others not involved
 
-    # for receiver in receivers:
-    #     send_email(subject, body, 
-    #             sender, receiver, 
-    #             password, sender_name, file)
+    for receiver in receivers:
+        send_email(subject, body, 
+                sender, receiver, 
+                password, sender_name, file)
 
     commit(file)
 

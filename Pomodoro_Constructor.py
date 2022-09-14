@@ -225,6 +225,8 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         else:
             self.year = datetime.now().year-1 if self.month_num == 12 else datetime.now().year
 
+        self.last_day = monthrange(self.year, self.month_num)[1]
+
         self.format = format
 
         FPDF.__init__(self) 
@@ -318,44 +320,44 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
             plt.close()
         
     
-    def h1(self, w, txt, x=0, y=0):
+    def h1(self, w, txt, x=0, y=0, align=""):
         self.set_x(15)
         if not (x==0 and y == 0):
             self.set_xy(x, y)
 
         self.set_font_size(30)
-        self.multi_cell(w, 30, txt)
+        self.multi_cell(w, 30, txt, align=align)
     
-    def h2(self, w, txt, x=0, y=0):
+    def h2(self, w, txt, x=0, y=0, align=""):
         self.set_x(15)
         if not (x==0 and y == 0):
             self.set_xy(x, y)
 
         self.set_font_size(25)
-        self.multi_cell(w, 25, txt)
+        self.multi_cell(w, 25, txt, align=align)
 
-    def h3(self, w, txt, x=0, y=0):
+    def h3(self, w, txt, x=0, y=0, align=""):
         self.set_x(15)
         if not (x==0 and y == 0):
             self.set_xy(x, y)
 
         self.set_font_size(21)
-        self.multi_cell(w, 21, txt)
+        self.multi_cell(w, 21, txt, align=align)
 
-    def h4(self, w, txt, x=0, y=0):
+    def h4(self, w, txt, x=0, y=0, align=""):
         self.set_x(15)
         if not (x==0 and y == 0):
             self.set_xy(x, y)
 
         self.set_font_size(18)
-        self.multi_cell(w, 18, txt)
+        self.multi_cell(w, 18, txt, align=align)
 
     def plot_number_of_messages(self, x:int, y:int, w:int=HALF) -> None: 
         # DESCRIPTION: create plot in which are displayed the number of messages sent in a given timeframe (from days to years), and add it to PDF
         # PARAMETERS: pos ("left"/"right") = position in the pdf | interval (day/week/month) = interval messages are stored
         self.prep()
         
-        x_pos = pd.date_range(f"{self.month_num}-01-{self.year}", f"{self.month_num}-{monthrange(self.year, self.month_num)[1]}-{self.year}", freq="D") # Getting range of all dates from first message to today 
+        x_pos = pd.date_range(f"{self.month_num}-01-{self.year}", f"{self.month_num}-{self.last_day}-{self.year}", freq="D") # Getting range of all dates from first message to today 
         y_pos = []
 
         for i in x_pos: # Getting the points
@@ -407,6 +409,42 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         plt.savefig(str(self.counter), transparent=True)
         self.add_image(x, y, w)
     
+    
+    def confront_months(self, x:int, y:int, w:int=HALF, return_to:int=1):
+        self.prep()
+
+
+        x_pos = []
+
+        year = self.year-return_to-1
+        for _ in range(return_to+1):
+            year += 1
+            x_pos.append(pd.to_datetime(f'{self.month_num}-01-{year}'))
+
+        y_pos = []
+
+        for i in x_pos: # Getting the points
+            point = sum(self.df.pomodori[self.df.data.dt.to_period('M').dt.to_timestamp() == i])
+            y_pos.append(point)
+        
+        if w == FULL:
+            plt.figure(figsize=(11, 5))
+
+        barlist = plt.bar(x_pos, y_pos, color="#f35243", width=250) # Plotting
+
+        barlist[-1].set_color("g" if y_pos[-1] >= y_pos[-2] else "m")
+
+        plt.xticks(x_pos, [i.strftime("%Y") for i in x_pos])
+        plt.ylim(0)
+        plt.grid(axis="y")
+        
+        plt.title("Numero di pomodori negli ultimi anni", pad=10) 
+
+        plt.savefig(str(self.counter), transparent=True)
+        self.add_image(x, y, w)
+
+        return y_pos[-1], y_pos[-2]
+
 
     def best_streak(self, x:int, y:int, w:int=HALF) -> tuple:
         self.prep()
@@ -414,7 +452,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         best = []
         counter = []
         temp = pd.to_datetime(f"{self.month_num}-01-{self.year}")
-        for i in range(monthrange(self.year, self.month_num)[1]):
+        for _ in range(self.last_day):
             if len(self.df[self.df.data == temp]) == 0:
                 if len(counter) > len(best):
                     best = counter
@@ -461,8 +499,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         # PARAMETERS: pos ("left"/"right") = position in the pdf
         self.prep()
 
-
-        slotted_dict = get_time_dict(self.df[self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]])
+        slotted_dict = get_time_dict(self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')])
 
         slotted_dict = {f"{'0' if i < timedelta(hours=10) else ''}{str(i)[:-3]}":j for i,j in slotted_dict.items()} # Changing xticks to make them easier to look at in plot
         plt.plot_date(slotted_dict.keys(), slotted_dict.values(), color="#f35243")
@@ -532,6 +569,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         plt.savefig(str(self.counter), transparent=True)
         self.add_image(x, y, w)
     
+
     def add_last_page(self):
 
         self.add_page()
