@@ -542,7 +542,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
                                         wedgeprops={"edgecolor":"k",'linewidth': 3})    
 
         patches, texts, autotexts = plt.pie(y_pos, labels=x_pos, colors=COLORS, textprops={"fontsize":16},
-                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0)),} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
+                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
                                     wedgeprops={"edgecolor":"k",'linewidth': 3})    
         for text in texts:
             text.set_fontsize(20)
