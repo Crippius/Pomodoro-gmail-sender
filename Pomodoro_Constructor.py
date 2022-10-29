@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt # To plot all the data in a meaningful way
 
 from matplotlib import rcParams # To change the font used by matplotliv
 import matplotlib.font_manager as fm
+from matplotlib.ticker import MaxNLocator
 
 from fpdf import FPDF # To create and deploy the PDF that can later be downloaded
 
@@ -197,6 +198,31 @@ def max_and_index(lst:list) -> tuple: # DESCRIPTION: returns the maximum value a
     return best, best_index
 
 
+def add_nl(string:str, newline:int=10):
+    new_str = ""
+    curr_line = 0
+    for word in string.split(" "):
+        print(new_str, word)
+        length = len(word)
+        if length+curr_line > newline:
+            if length < newline:
+                new_str += "\n"+word
+                curr_line = length
+            else:
+                new_str += "\n"
+                times = 0
+                while len(word[times*newline:]) < newline:
+                    new_str += word[times*newline:(times+1)*newline]+"\n"
+                    times += 1
+                new_str += word[times*newline:]
+                curr_line = len(string[times*newline:])
+        else:
+            new_str += " "+word
+            curr_line += 1+length
+    return new_str
+
+
+
 class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inherits FPDF class, adding new functionalities
 
     def __init__(self, file:str, format:str, month:int=0, year:int=0): 
@@ -357,22 +383,35 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.set_font_size(18)
         self.multi_cell(w, 18, txt, align=align)
 
-    def plot_number_of_messages(self, x:int, y:int, w:int=HALF) -> None: 
+    def plot_number_of_messages(self, x:int, y:int, w:int=HALF, period="month") -> None: 
         # DESCRIPTION: create plot in which are displayed the number of messages sent in a given timeframe (from days to years), and add it to PDF
         # PARAMETERS: pos ("left"/"right") = position in the pdf | interval (day/week/month) = interval messages are stored
         self.prep()
         
-        x_pos = pd.date_range(f"{self.month_num}-01-{self.year}", f"{self.month_num}-{self.last_day}-{self.year}", freq="D") # Getting range of all dates from first message to today 
+        if period == "month":
+            x_pos = pd.date_range(f"{self.month_num}-01-{self.year}", f"{self.month_num}-{self.last_day}-{self.year}", freq="D") # Getting range of all dates from first message to today 
+        else:
+            x_pos = pd.date_range(f"01-01-{self.year}", f"12-31-{self.year}", freq="D")
         y_pos = []
 
         for i in x_pos: # Getting the points
             point = sum(self.df.pomodori[self.df.data == i])
             y_pos.append(point)
         
+        
         if w == FULL:
             plt.figure(figsize=(11, 5))
+
+        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+
         plt.bar(x_pos, y_pos, color="#f35243") # Plotting
-        plt.xticks(x_pos,[i.strftime("%d") for i in x_pos])
+        
+        if period == "month":
+            plt.xticks(x_pos, [i.strftime("%d") for i in x_pos])
+        else:
+            plt.xticks(x_pos, ["" if int(i.strftime("%d")) != 1 else i.strftime("%m") for i in x_pos])
+
+        
         plt.axhline(y=sum(y_pos)/len(y_pos), color="r", linestyle="--")
         plt.grid(axis="y")
         plt.ylim(0)
@@ -505,15 +544,18 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.prep()
 
         slotted_dict = get_time_dict(self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')])
-
         slotted_dict = {f"{'0' if i < timedelta(hours=10) else ''}{str(i)[:-3]}":j for i,j in slotted_dict.items()} # Changing xticks to make them easier to look at in plot
-        plt.plot_date(slotted_dict.keys(), slotted_dict.values(), color="#f35243")
+        
+        dates = list(slotted_dict.keys())[6:]+list(slotted_dict.keys())[:6]
+        pomodori = list(slotted_dict.values())[6:]+list(slotted_dict.values())[:6]
+
+        plt.plot_date(dates, pomodori, color="#f35243")
         plt.grid(axis="y")
-        plt.fill_between(slotted_dict.keys(), slotted_dict.values(), color="#fedfbe")
+        plt.fill_between(dates, pomodori, color="#fedfbe")
 
         N=6 # Spacing xticks to avoid overlapping
         
-        x_pos = [list(slotted_dict.keys())[i] if not i%N else "" for i in range(len(slotted_dict.keys()))]
+        x_pos = [dates[i] if not i%N else "" for i in range(len(dates))]
         plt.xticks(x_pos)
         plt.title("Numero di pomodori per periodo del giorno")
         plt.ylim(0)
@@ -535,6 +577,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         x_pos = month_df.materia.unique()
         y_pos = [sum(month_df.pomodori[month_df.materia == i]) for i in x_pos]
+        x_pos = [add_nl(i) for i in  month_df.materia.unique()]
 
         if len(y_pos) == 0:
             patches, texts, autotexts = plt.pie([1], labels=["0"], colors=COLORS, textprops={"fontsize":16},
@@ -565,7 +608,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
                                         wedgeprops={"edgecolor":"k",'linewidth': 3})    
 
         patches, texts, autotexts = plt.pie(y_pos, labels=x_pos, colors=COLORS, textprops={"fontsize":16},
-                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0)),} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
+                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
                                     wedgeprops={"edgecolor":"k",'linewidth': 3}) 
         for text in texts:
             text.set_fontsize(20)   

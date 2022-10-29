@@ -21,19 +21,47 @@ def commit(file):
 
 def seasonal(file, email=True):
 
-    pdf = Pomodoro_Constructor(file, "season")
-    
-    pdf.save()
+    # pdf = Pomodoro_Constructor(file, "season")
 
+    # pdf.save()
+
+    pass
 
 def yearly(file, email=True):
 
     pdf = Pomodoro_Constructor(file, "year")
+
+    pdf.add_new_page("Pomodori completati")
+
+    num_pomodori = sum(pdf.df.pomodori[pdf.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{pdf.year}')])
+
+    num_giorni = len(pd.date_range(f"01-01-{pdf.year}", f"12-31-{pdf.year}", freq="D"))
+    avg = round(num_pomodori/num_giorni, 2)
+
+    pdf.h1(WIDTH, x=15, y=40, txt=f"Nel {pdf.year} sono stati completati {num_pomodori} pomodori!")
+    pdf.h2(WIDTH, x=15, y=58, txt=f"In media sono {avg} pomodori al giorno!")
+
+    ore = num_pomodori*25//60
+    minuti = num_pomodori*25%60
     
-    # PER Anno
-    # day_and_time_dict = get_time_dict(pdf.df, True)
-    # day_and_time_dict = sort_dict(day_and_time_dict, reverse=False)
-    # best_of_the_best = list(day_and_time_dict.items())[0]
+    pdf.h4(HALF, x=HALF, y=62, txt=f"Sono {ore} ore e {minuti} minuti!", align="R")
+
+    pdf.plot_number_of_messages(x=LEFT_PLOT, y=80, w=FULL, period="year")
+    
+    pdf.image("images/quadrilatero.png", x=0, y=15+HEIGHT//2, w=WIDTH, h=HEIGHT//2)
+
+    pdf.last_months(x=LEFT_PLOT, y=170, w=HALF, return_to=3)
+
+    last = pdf.month_num-1 if pdf.month_num != 1 else 12
+    num_pomodori_last = sum(pdf.df.pomodori[pdf.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{last}-01-{pdf.year}')])
+    num_giorni_last = len(pd.date_range(f"{last}-01-{pdf.year}", f"{last}-{monthrange(pdf.year, (last)%13)[1]}-{pdf.year}", freq="D"))
+    avg_last = round(num_pomodori_last/num_giorni_last, 2)
+    
+    day_and_time_dict = get_time_dict(pdf.df, True)
+    day_and_time_dict = sort_dict(day_and_time_dict, reverse=False)
+    best_of_the_best = list(day_and_time_dict.items())[0]
+
+    pdf.h4(HALF, x=HALF, y=2, txt=f"{best_of_the_best}", align="R")
 
     pdf.save()
 
@@ -66,8 +94,8 @@ def monthly(file, email=True):
     num_giorni_last = len(pd.date_range(f"{last}-01-{pdf.year}", f"{last}-{monthrange(pdf.year, (last)%13)[1]}-{pdf.year}", freq="D"))
     avg_last = round(num_pomodori_last/num_giorni_last, 2)
 
-    pdf.h3(WIDTH//2, x=HALF+15, y=175, txt=f"{'+' if num_pomodori-num_pomodori_last > 0 else '-'}{abs(num_pomodori-num_pomodori_last)} in {'meno' if num_pomodori-num_pomodori_last<0 else 'più'} dello scorso mese")
-    pdf.h3(WIDTH//2, x=HALF+15, y=190, txt=f"({'+' if num_pomodori-num_pomodori_last > 0 else '-'}{abs(avg-avg_last)} pomodori al giorno)")
+    pdf.h3(WIDTH//2, x=HALF+15, y=175, txt=f"{'+' if num_pomodori-num_pomodori_last > 0 else '-'}{round(abs(num_pomodori-num_pomodori_last), 2)} in {'meno' if num_pomodori-num_pomodori_last<0 else 'più'} dello scorso mese")
+    pdf.h3(WIDTH//2, x=HALF+15, y=190, txt=f"({'+' if num_pomodori-num_pomodori_last > 0 else '-'}{round(abs(avg-avg_last), 2)} pomodori al giorno)")
 
     this_year, last_year = pdf.confront_months(x=RIGHT_PLOT, y=210, w=HALF)
 
