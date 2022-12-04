@@ -25,7 +25,7 @@ FULL = WIDTH-10
 HALF = (WIDTH//2)-5
 
 
-COLORS = ("#f35243", "#fedfbe", "#f37d43", "#f3437d", "#f3aa43", "#fecfbe")
+COLORS = ("#f35243", "#fedfbe", "#f37d43", "#f3437d", "#f3aa43", "#fecfbe", "#febecd", "#feefbe", "#fd9773", "#fdaa8c", "#fee2d7")
 
 
 
@@ -202,14 +202,13 @@ def add_nl(string:str, newline:int=10):
     new_str = ""
     curr_line = 0
     for word in string.split(" "):
-        print(new_str, word)
         length = len(word)
         if length+curr_line > newline:
             if length < newline:
                 new_str += "\n"+word
                 curr_line = length
             else:
-                new_str += "\n"
+                new_str += "\n" if len(new_str) != 0 else ""
                 times = 0
                 while len(word[times*newline:]) < newline:
                     new_str += word[times*newline:(times+1)*newline]+"\n"
@@ -275,6 +274,14 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.add_font('Bebas', '', "fonts/BebasNeue.ttf")
 
         self.add_first_page()
+
+    def __str__(self):
+
+        form = {"month":f"{self.month} {self.year}",
+                "year":f"{self.year}",
+                "seasonal":f"{self.month} {self.year}"} # Needs to change
+                
+        return f"pdfs/Pomodoro Report - {form[self.format]}.pdf"
 
 
     def add_first_page(self): # DESCRIPTION: Adding the background of the pdf + aestethics
@@ -383,19 +390,28 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.set_font_size(18)
         self.multi_cell(w, 18, txt, align=align)
 
-    def plot_number_of_messages(self, x:int, y:int, w:int=HALF, period="month") -> None: 
+    def plot_number_of_messages(self, x:int, y:int, w:int=HALF) -> None: 
         # DESCRIPTION: create plot in which are displayed the number of messages sent in a given timeframe (from days to years), and add it to PDF
         # PARAMETERS: pos ("left"/"right") = position in the pdf | interval (day/week/month) = interval messages are stored
         self.prep()
+
         
-        if period == "month":
+        if self.format == "month":
             x_pos = pd.date_range(f"{self.month_num}-01-{self.year}", f"{self.month_num}-{self.last_day}-{self.year}", freq="D") # Getting range of all dates from first message to today 
         else:
             x_pos = pd.date_range(f"01-01-{self.year}", f"12-31-{self.year}", freq="D")
+        
+        roll = [sum(self.df.pomodori[self.df.data == f"{self.month_num if self.format =='month' else '01'}-01-{self.year}"])]*(3 if self.format=="month" else 7)
+        
         y_pos = []
+        rolling_averages = []
+
 
         for i in x_pos: # Getting the points
+
             point = sum(self.df.pomodori[self.df.data == i])
+            roll = roll[1:]+[point]
+            rolling_averages.append(sum(roll)/len(roll))
             y_pos.append(point)
         
         
@@ -404,9 +420,10 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
 
-        plt.bar(x_pos, y_pos, color="#f35243") # Plotting
+        plt.bar(x_pos, y_pos, color="#f35243", alpha=0.75) # Plotting
+        plt.plot(x_pos, rolling_averages, color="#f3437d", linewidth=(2 if self.format == "month" else 1.5))
         
-        if period == "month":
+        if self.format == "month":
             plt.xticks(x_pos, [i.strftime("%d") for i in x_pos])
         else:
             plt.xticks(x_pos, ["" if int(i.strftime("%d")) != 1 else i.strftime("%m") for i in x_pos])
@@ -422,33 +439,41 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.add_image(x, y, w)
     
 
-    def last_months(self, x:int, y:int, w:int=HALF, return_to:int=3) -> None:
+    def last_period(self, x:int, y:int, w:int=HALF, return_to:int=3) -> None:
         self.prep()
         
-        end = pd.to_datetime(f'{self.month_num}-01-{self.year}')
+
+        end = pd.to_datetime(f'{self.month_num if self.format=="month" else "01"}-01-{self.year}')
         start = end
         for _ in range(return_to):
-            start = start.replace(day=1) - timedelta(days=1)
+            if self.format == "month":
+                start = start.replace(day=1) - timedelta(days=1)
+            else:
+                start = start.replace(day=1, month=1) - timedelta(days=1)
+
         
-        x_pos = pd.date_range(start, end, freq="MS")
+        x_pos = pd.date_range(start, end, freq="MS" if self.format == "month" else "YS")
         y_pos = []
 
         for i in x_pos: # Getting the points
-            point = sum(self.df.pomodori[self.df.data.dt.to_period('M').dt.to_timestamp() == i])
+            point = sum(self.df.pomodori[self.df.data.dt.to_period('M' if self.format=="month" else 'Y').dt.to_timestamp() == i])
             y_pos.append(point)
 
         if w == FULL:
             plt.figure(figsize=(11, 5))
 
-        barlist = plt.bar(x_pos, y_pos, color="#f35243", width=20) # Plotting
+        barlist = plt.bar(x_pos, y_pos, color="#f35243", width=20 if self.format=="month" else 240) # Plotting
 
         barlist[-1].set_color("g" if y_pos[-1] >= y_pos[-2] else "m")
 
-        plt.xticks(x_pos, [self.month_dict[int(i.strftime("%m"))] for i in x_pos])
+        if self.format == "month":
+            plt.xticks(x_pos, [self.month_dict[int(i.strftime("%m"))] for i in x_pos])
+        else:
+            plt.xticks(x_pos, [i.strftime("%Y") for i in x_pos])
 
         plt.grid(axis="y")
         
-        plt.title("Numero di pomodori negli ultimi mesi", pad=10) 
+        plt.title(f"Numero di pomodori negli ultimi {'mesi' if self.format=='month' else 'anni'}", pad=10) 
 
         plt.savefig(str(self.counter), transparent=True)
         self.add_image(x, y, w)
@@ -460,10 +485,13 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         x_pos = []
 
-        year = self.year-return_to-1
-        for _ in range(return_to+1):
-            year += 1
-            x_pos.append(pd.to_datetime(f'{self.month_num}-01-{year}'))
+        if self.format == "month":
+            year = self.year-return_to-1
+            for _ in range(return_to+1):
+                year += 1
+                x_pos.append(pd.to_datetime(f'{self.month_num}-01-{year}'))
+        else:
+            x_pos = [pd.to_datetime(f'{i}-01-{self.year}') for i in range(1, 12+1)]
 
         y_pos = []
 
@@ -474,20 +502,29 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         if w == FULL:
             plt.figure(figsize=(11, 5))
 
-        barlist = plt.bar(x_pos, y_pos, color="#f35243", width=250) # Plotting
+        if self.format == "month":
+            barlist = plt.bar(x_pos, y_pos, color="#f35243", width=250) # Plotting
+            barlist[-1].set_color("g" if y_pos[-1] >= y_pos[-2] else "m")
+            plt.xticks(x_pos, [i.strftime("%Y") for i in x_pos])
+            plt.title("Numero di pomodori negli ultimi anni", pad=10)
+        
+        else:
+            barlist = plt.bar(x_pos, y_pos, color="#f35243", width=20)
+            barlist[y_pos.index(max(y_pos))].set_color("g")
+            barlist[y_pos.index(min(y_pos))].set_color("m")
+            plt.xticks(x_pos, [i.strftime("%m") for i in x_pos])
+            plt.title("Numero di pomodori per ogni mese")
 
-        barlist[-1].set_color("g" if y_pos[-1] >= y_pos[-2] else "m")
-
-        plt.xticks(x_pos, [i.strftime("%Y") for i in x_pos])
         plt.ylim(0)
         plt.grid(axis="y")
         
-        plt.title("Numero di pomodori negli ultimi anni", pad=10) 
-
+        
         plt.savefig(str(self.counter), transparent=True)
         self.add_image(x, y, w)
-
-        return y_pos[-1], y_pos[-2]
+        if self.format == "month":
+            return y_pos[-1], y_pos[-2]
+        else:
+            return (x_pos[y_pos.index(max(y_pos))].strftime("%b"), max(y_pos)), (x_pos[y_pos.index(min(y_pos))].strftime("%b"), min(y_pos))
 
 
     def best_streak(self, x:int, y:int, w:int=HALF) -> tuple:
@@ -522,9 +559,11 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         weekday = {"en":["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
                    "it":["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]}
-        
-        month_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
-        y_pos = [sum(month_df.pomodori[month_df.data.dt.day_name() == i]) for i in weekday["en"]]
+        if self.format == "month":            
+            curr_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
+        else:
+            curr_df = self.df[self.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{self.year}')]
+        y_pos = [sum(curr_df.pomodori[curr_df.data.dt.day_name() == i]) for i in weekday["en"]]
 
         spider_plot(weekday["it"], y_pos)
         plt.title("Numero di pomodori per giornata")
@@ -543,7 +582,10 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         # PARAMETERS: pos ("left"/"right") = position in the pdf
         self.prep()
 
-        slotted_dict = get_time_dict(self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')])
+        if self.format == "month":
+            slotted_dict = get_time_dict(self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')])
+        else:
+            slotted_dict = get_time_dict(self.df[self.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{self.year}')])
         slotted_dict = {f"{'0' if i < timedelta(hours=10) else ''}{str(i)[:-3]}":j for i,j in slotted_dict.items()} # Changing xticks to make them easier to look at in plot
         
         dates = list(slotted_dict.keys())[6:]+list(slotted_dict.keys())[:6]
@@ -573,34 +615,50 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
     def plot_classes(self, x, y, w:int=HALF) -> None: # DESCRIPTION: Plotting number of messages sent per weekday
         self.prep()
 
-        month_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
+        if self.format == "month":
+            curr_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
+        else:
+            curr_df = self.df[self.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{self.year}')]
+        
+        x_pos = curr_df.materia.unique()
+        y_pos = [sum(curr_df.pomodori[curr_df.materia == i]) for i in x_pos]
+        x_pos = [add_nl(i) for i in  curr_df.materia.unique()]
+        
+        if self.format == "month":
+            if len(y_pos) == 0:
+                patches, texts, autotexts = plt.pie([1], labels=["0"], colors=COLORS, textprops={"fontsize":16},
+                                            autopct=lambda x: f"0 pomodori",
+                                            wedgeprops={"edgecolor":"k",'linewidth': 3})    
 
-        x_pos = month_df.materia.unique()
-        y_pos = [sum(month_df.pomodori[month_df.materia == i]) for i in x_pos]
-        x_pos = [add_nl(i) for i in  month_df.materia.unique()]
-
-        if len(y_pos) == 0:
-            patches, texts, autotexts = plt.pie([1], labels=["0"], colors=COLORS, textprops={"fontsize":16},
-                                        autopct=lambda x: f"0 pomodori",
+            patches, texts, autotexts = plt.pie(y_pos, labels=x_pos, colors=COLORS, textprops={"fontsize":16},
+                                        autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if x > 10 else "",
                                         wedgeprops={"edgecolor":"k",'linewidth': 3})    
-
-        patches, texts, autotexts = plt.pie(y_pos, labels=x_pos, colors=COLORS, textprops={"fontsize":16},
-                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
-                                    wedgeprops={"edgecolor":"k",'linewidth': 3})    
-        for text in texts:
-            text.set_fontsize(20)
+            for text in texts:
+                text.set_fontsize(20)
+        else:
+            plt.bar(list(range(len(y_pos))), y_pos, color=COLORS, edgecolor="black")
+            offset = y_pos.index(max(y_pos))
+            for i in range(len(y_pos)):
+                num, txt = y_pos[i], x_pos[i]
+                align = list(range(len(y_pos)))[i] - (0.09*len(txt[:txt.find("\n")]))
+                plt.text(list(range(len(y_pos)))[i] - (0.25 if len(str(num)) == 2 else 0.35), num-max(y_pos)*7//100, str(num))
+                plt.text(align, num+max(y_pos)*1//100, str(txt) if (i+offset)%2 else "", fontsize=18)
+            plt.xticks(list(range(len(y_pos))), [x_pos[i] if (i+offset+1)%2 else "" for i in range(len(x_pos))], fontsize=16)
 
         plt.title("Numero di pomodori per materia")
-        plt.savefig(str(self.counter), transparent=True)
+        plt.savefig(str(self.counter), transparent=True, bbox_inches='tight' if self.format == "year" else "")
         self.add_image(x, y, w)
-    
 
     def plot_type_of_study(self, x, y, w:int=HALF) -> None:
         self.prep()
 
-        month_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
-        x_pos = month_df.tipo.unique()
-        y_pos = [sum(month_df.pomodori[month_df.tipo == i]) for i in x_pos]
+        if self.format == "month":
+            curr_df = self.df[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{self.month_num}-01-{self.year}')]
+        else:
+            curr_df = self.df[self.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{self.year}')]
+        
+        x_pos = curr_df.tipo.unique()
+        y_pos = [sum(curr_df.pomodori[curr_df.tipo == i]) for i in x_pos]
 
         if len(y_pos) == 0:
             patches, texts, autotexts = plt.pie([1], labels=["0"], colors=COLORS, textprops={"fontsize":16},
@@ -608,7 +666,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
                                         wedgeprops={"edgecolor":"k",'linewidth': 3})    
 
         patches, texts, autotexts = plt.pie(y_pos, labels=x_pos, colors=COLORS, textprops={"fontsize":16},
-                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if round((x/100)*sum(y_pos), 0) > 15 else "",
+                                    autopct=lambda x: f"{int(round((x/100)*sum(y_pos), 0))} pomodori\n({round(x, 2)}%)" if x > 15 else "",
                                     wedgeprops={"edgecolor":"k",'linewidth': 3}) 
         for text in texts:
             text.set_fontsize(20)   
@@ -643,19 +701,25 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.multi_cell(FULL, 10, "Tommaso Crippa\nThe Pomodoro Technique", align="R")
         self.set_text_color(0, 0, 0)
     
-    def save(self) -> None: # DESCRIPTION: Save file if nothing has gone wrong, remove images created
+    def save(self, dir="", title="") -> None: # DESCRIPTION: Save file if nothing has gone wrong, remove images created
         self.prep(plot=False)
 
         self.add_last_page()
 
-        if self.format == "month":
+        if dir == "":
+            dir = "pdfs"
+        
+
+        if title != "":
+            out = title
+        elif self.format == "month":
             out = f"Pomodoro Report - {self.month} {self.year}"
         elif self.format == "year":
             out = f"Pomodoro Report - {self.year}"
         elif self.format == "seasonal":
             out = f"Pomodoro Report - {self.month} {self.year}" # Needs to change
         self.output(f'{out}')
-        move(f'{out}', f'pdfs/{out}.pdf')
+        move(f'{out}', f'{dir}/{out}.pdf')
         while self.counter != 0:
             if path.exists(f"{self.counter}.png"):
                 remove(f"{self.counter}.png")
