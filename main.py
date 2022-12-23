@@ -21,10 +21,21 @@ def commit(pdf):
     origin.push()
 
 
-def format_email(pdf, txt):
-
-    subject = f"Pomodoro Report - {pdf.month} {pdf.year}"
-    body = f"""
+def format_email(pdf:Pomodoro_Constructor):
+    
+    if pdf.format == "month": 
+        subject = f"Pomodoro Report - {pdf.month} {pdf.year}"
+        file = f"pdfs/Pomodoro Report - {pdf.month} {pdf.year}.pdf"
+        avg = pdf.average()
+        avg_last = pdf.average(-1)
+        txt = ""
+        if avg < 1:
+            txt = "In questo anno si poteva fare di meglio..."
+        elif avg < avg_last:
+            txt = "Continua così!"
+        else:
+            txt = "Stai andando alla grande!!!"
+        body = f"""
 Ciao!
 
 In allegato è presente il report mensile di pomodori completati nel mese di {pdf.month}
@@ -32,12 +43,33 @@ In allegato è presente il report mensile di pomodori completati nel mese di {pd
 
 Tommaso Crippa"""
 
+    elif pdf.format == "year":
+        subject = f"Pomodoro Report - {pdf.year}"
+        file = f"pdfs/Pomodoro Report - {pdf.year}.pdf"
+        avg = pdf.average()
+        avg_last = pdf.average(-1)
+        txt = ""
+        if avg < 1:
+            txt = "In questo anno si poteva fare di meglio..."
+        elif avg < avg_last:
+            txt = "Continua così!"
+        else:
+            txt = "Stai andando alla grande!!!"
+        body = f"""
+Ciao!
+
+In allegato è presente il report annuale di pomodori completati nel {pdf.year}
+{txt}
+
+Tommaso Crippa"""        
+
     sender = config.sender
     password = config.api_key
     sender_name = config.name
-    file = f"pdfs/Pomodoro Report - {pdf.month} {pdf.year}.pdf"
-    receivers = config.receivers if date.day == 1 else [config.receivers[0]] # To avoid sending emails to others not involved
-
+    
+    # receivers = config.receivers if date.day == 1 else [config.receivers[0]] # To avoid sending emails to others not involved
+    receivers = []
+    print(subject, body, file)
     for receiver in receivers:
         send_email(subject, body, 
                 sender, receiver, 
@@ -59,8 +91,7 @@ def yearly(file, save_pdf=True, send_pdf=True, commit_pdf=True):
 
     num_pomodori = sum(pdf.df.pomodori[pdf.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{pdf.year}')])
 
-    num_giorni = len(pd.date_range(f"01-01-{pdf.year}", f"12-31-{pdf.year}", freq="D"))
-    avg = round(num_pomodori/num_giorni, 2)
+    avg = pdf.average()
 
     pdf.h1(WIDTH, x=15, y=40, txt=f"Nel {pdf.year} sono stati completati {num_pomodori} pomodori!")
     pdf.h2(WIDTH, x=15, y=58, txt=f"In media sono {avg} pomodori al giorno!")
@@ -115,14 +146,7 @@ def yearly(file, save_pdf=True, send_pdf=True, commit_pdf=True):
     pdf.save()
 
     if send_pdf:
-        txt = ""
-        if avg < 1:
-            txt = "In questo anno si poteva fare di meglio..."
-        elif avg < avg_last:
-            txt = "Continua così!"
-        else:
-            txt = "Stai andando alla grande!!!"
-        format_email(pdf, txt)
+        format_email(pdf)
     
     if commit_pdf:
         commit(str(pdf))
@@ -134,8 +158,8 @@ def monthly(file, save_pdf=True, send_pdf=True, commit_pdf=True):
     pdf.add_new_page("Pomodori completati")
 
     num_pomodori = sum(pdf.df.pomodori[pdf.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{pdf.month_num}-01-{pdf.year}')])
-    num_giorni = len(pd.date_range(f"{pdf.month_num}-01-{pdf.year}", f"{pdf.month_num}-{pdf.last_day}-{pdf.year}", freq="D"))
-    avg = round(num_pomodori/num_giorni, 2)
+    
+    avg = pdf.average()
 
     pdf.h1(WIDTH, x=15, y=40, txt=f"A {pdf.month} sono stati completati {num_pomodori} pomodori!")
     pdf.h2(WIDTH, x=15, y=58, txt=f"In media sono {avg} pomodori al giorno!")
@@ -190,14 +214,7 @@ def monthly(file, save_pdf=True, send_pdf=True, commit_pdf=True):
     pdf.save()
 
     if send_pdf:
-        txt = ""
-        if avg < 1:
-            txt = "In questo mese si poteva fare di meglio..."
-        elif avg < avg_last:
-            txt = "Continua così!"
-        else:
-            txt = "Stai andando alla grande!!!"
-        format_email(pdf, txt)
+        format_email(pdf)
     
     if commit_pdf:
         commit(str(pdf))
@@ -212,6 +229,6 @@ if __name__ == "__main__":
         if date.month == 1:
             yearly(file)
     else:
-        yearly(file, False, False)
+        seasonal(file)
     
 

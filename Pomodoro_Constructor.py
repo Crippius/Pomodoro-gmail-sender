@@ -390,6 +390,25 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.set_font_size(18)
         self.multi_cell(w, 18, txt, align=align)
 
+    def average(self, offset=0):
+        if self.format == "year":
+            year = self.year+offset
+            num_pomodori = sum(self.df.pomodori[self.df.data.dt.to_period('Y').dt.to_timestamp() == pd.to_datetime(f'01-01-{year}')])
+            num_giorni = len(pd.date_range(f"01-01-{year}", f"12-31-{year}", freq="D"))
+        
+        elif self.format == "month":
+            month = self.month_num+offset
+            year = self.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            last_day = monthrange(year, month)[1]
+
+            num_pomodori = sum(self.df.pomodori[self.df.data.dt.to_period('M').dt.to_timestamp() == pd.to_datetime(f'{month}-01-{year}')])
+            num_giorni = len(pd.date_range(f"{month}-01-{year}", f"{month}-{last_day}-{year}", freq="D"))
+        
+        return round(num_pomodori/num_giorni, 2)
+
     def plot_number_of_messages(self, x:int, y:int, w:int=HALF) -> None: 
         # DESCRIPTION: create plot in which are displayed the number of messages sent in a given timeframe (from days to years), and add it to PDF
         # PARAMETERS: pos ("left"/"right") = position in the pdf | interval (day/week/month) = interval messages are stored
