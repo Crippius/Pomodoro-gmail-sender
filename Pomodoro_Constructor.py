@@ -7,7 +7,7 @@ from matplotlib.ticker import MaxNLocator
 
 from fpdf import FPDF # To create and deploy the PDF that can later be downloaded
 
-from datetime import date, datetime, timedelta # To manipulate the dates we
+from datetime import datetime, timedelta # To manipulate dates
 from shutil import move # To move the pdf inside the correct directory
 from os import remove, path # To remove the images created
 from math import pi # To use polar coordinates in spider plot
@@ -253,6 +253,15 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.last_day = monthrange(self.year, self.month_num)[1]
 
         self.format = format
+        
+        self.dir = f"pdfs/{self.year}"
+        if self.format == "month":
+            str_num = str(self.month_num) if self.month_num >= 10 else "0"+str(self.month_num)
+            self.filename = f"Pomodoro Report - {str_num} {self.month} {self.year}"
+        elif self.format == "year":
+            self.filename = f"Pomodoro Report - {self.year}"
+        elif self.format == "seasonal":
+            self.filename = f"Pomodoro Report - {self.month} {self.year}" # Needs to change
 
         FPDF.__init__(self) 
 
@@ -726,19 +735,13 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.add_last_page()
 
         if dir == "":
-            dir = "pdfs"
-        
+            self.dir = f"pdfs/{self.year}"
 
         if title != "":
-            out = title
-        elif self.format == "month":
-            out = f"Pomodoro Report - {self.month} {self.year}"
-        elif self.format == "year":
-            out = f"Pomodoro Report - {self.year}"
-        elif self.format == "seasonal":
-            out = f"Pomodoro Report - {self.month} {self.year}" # Needs to change
-        self.output(f'{out}')
-        move(f'{out}', f'{dir}/{out}.pdf')
+            self.filename = title
+        self.output(f'{self.filename}')
+
+        move(f'{self.filename}', f'{self.dir}/{self.filename}.pdf') # Remove the images created
         while self.counter != 0:
             if path.exists(f"{self.counter}.png"):
                 remove(f"{self.counter}.png")

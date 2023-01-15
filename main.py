@@ -1,6 +1,6 @@
 from calendar import monthrange
 from datetime import datetime
-from Pomodoro_Constructor import FULL, HALF, HEIGHT, LEFT_PLOT, RIGHT_PLOT, WIDTH, Pomodoro_Constructor, get_time_dict, sort_dict
+from Pomodoro_Constructor import FULL, HALF, HEIGHT, LEFT_PLOT, RIGHT_PLOT, WIDTH, Pomodoro_Constructor
 from send_email import send_email
 import pandas as pd
 import config
@@ -22,10 +22,12 @@ def commit(pdf):
 
 
 def format_email(pdf:Pomodoro_Constructor):
+
+    date = datetime.now()
     
     if pdf.format == "month": 
         subject = f"Pomodoro Report - {pdf.month} {pdf.year}"
-        file = f"pdfs/Pomodoro Report - {pdf.month} {pdf.year}.pdf"
+        file = f"{pdf.dir}/{pdf.filename}.pdf"
         avg = pdf.average()
         avg_last = pdf.average(-1)
         txt = ""
@@ -45,7 +47,7 @@ Tommaso Crippa"""
 
     elif pdf.format == "year":
         subject = f"Pomodoro Report - {pdf.year}"
-        file = f"pdfs/Pomodoro Report - {pdf.year}.pdf"
+        file = f"{pdf.dir}/{pdf.filename}.pdf"
         avg = pdf.average()
         avg_last = pdf.average(-1)
         txt = ""
@@ -67,9 +69,8 @@ Tommaso Crippa"""
     password = config.api_key
     sender_name = config.name
     
-    # receivers = config.receivers if date.day == 1 else [config.receivers[0]] # To avoid sending emails to others not involved
-    receivers = []
-    print(subject, body, file)
+    receivers = config.receivers if date.day == 1 else [config.receivers[0]] # To avoid sending emails to others not involved
+
     for receiver in receivers:
         send_email(subject, body, 
                 sender, receiver, 
