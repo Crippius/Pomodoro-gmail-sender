@@ -12,7 +12,7 @@ commits it into this repo, and sends it as an email attachment to the people int
 The Pomodoro_Constructor class is in the homonym python file and inherits the FPDF class and expands it with new plot functions to add to the report
 and some QOL functions to abstract some boring procedures.
 ##
-#### Check out the latest yearly release [here!](https://github.com/Crippius/pomodoro-email-sender/blob/main/pdfs/2022/Pomodoro%20Report%20-%202022.pdf)
+#### Check out the latest yearly release [here!](https://github.com/Crippius/pomodoro-email-sender/blob/main/pdfs/2024/Pomodoro%20Report%20-%2001%20Gennaio%202024.pdf)
 
 All reports are written in Italian since they're created for my personal use but hopefully the visuals help understand what's written
 

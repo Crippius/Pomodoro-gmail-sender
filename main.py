@@ -298,7 +298,7 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     if not save_pdf:
         pdf.save(dir="test_pdfs")
         return
-    pdf.save()
+    pdf.save(dir="pdfs")
 
     if send_pdf:
         format_email(pdf)

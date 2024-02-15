@@ -264,7 +264,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         elif self.format == "year":
             self.filename = f"Pomodoro Report - {self.year}"
         elif self.format == "degree":
-            self.filename = f"Pomodoro Report - The Final Report" # Needs to change
+            self.filename = f"Pomodoro Report - The Final Report"
 
         FPDF.__init__(self) 
 
