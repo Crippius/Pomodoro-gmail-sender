@@ -280,7 +280,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
             else:
                 self.ok = 1
             self.voti = pd.read_excel(voti)
-            self.voti.columns = ["materia", "voto", "cfu", "anno", "semestre", "prof", "tipo", "colore", "appunti"]
+            self.voti.columns = ["materia", "voto", "cfu", "anno", "semestre", "prof", "tipo", "colore", "appunti", "effettivo"]
 
 
         fe = fm.FontEntry(
@@ -433,6 +433,27 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         self.set_font_size(11)
         self.multi_cell(w, 11, txt, align=align)
+    
+    def final_project(self, mat):
+        return self.voti[self.voti.materia == mat].iloc[0].anno == "Prova Finale"
+    
+    def effettivo(self, mat):
+        return self.voti[self.voti.materia == mat].iloc[0].effettivo == 1
+    
+
+    def get_gpa(self):
+        gpa = 0
+        total_cfu = 0
+        for mat in self.voti.materia.unique():
+            if self.effettivo(mat):                    
+                voto = self.voti[self.voti.materia == mat].iloc[0].voto
+                voto = int(voto) if voto != "30L" else 30
+                cfu = self.voti[self.voti.materia == mat].iloc[0].cfu
+
+                gpa += voto * cfu
+                total_cfu += cfu
+        return gpa / (30 * total_cfu)
+
 
     def average(self, offset=0):
         if self.format == "year":
@@ -880,7 +901,8 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         nomignoli = {"Algoritmi e Principi dell'Informatica":"Algoritmi e Principi di Inf.",
                      "Progetto di Ingegneria Informatica":"Progetto di Ing. Inf.",
                      "Geometria e Algebra Lineare":"Geometria e Algebra Lin.",
-                     "Architettura dei calcolatori":"Arch. dei Calcolatori e S.O."}
+                     "Architettura dei calcolatori":"Arch. dei Calcolatori e S.O.",
+                     "Fondamenti di Ricerca Operativa":"Fond. di Ricerca Operativa"}
 
         if materia in nomignoli:
             self.add_new_page(nomignoli[materia])
@@ -898,12 +920,12 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         riga = self.voti[self.voti.materia == materia]
         if riga.size != 0:
-            _, voto, cfu, anno, sem, prof, tipo, colore, appunti = riga.values[0]
+            _, voto, cfu, anno, sem, prof, tipo, colore, appunti, effettivi = riga.values[0]
         else:
-            voto, anno, cfu, sem, prof, tipo, colore, appunti = 0, "Primo", "Primo", "0", "BO", "matematica", "bianco", 0
+            voto, anno, cfu, sem, prof, tipo, colore, appunti, effettivi = 0, "Primo", "Primo", "0", "BO", "matematica", "bianco", 0, 1 
 
         self.h2(WIDTH, x=15, y=30, txt=f"{anno} anno - {sem} Semestre")
-        self.h2(WIDTH, x=15, y=40, txt=f"Prof. {prof} - {cfu} cfu")
+        self.h2(WIDTH, x=15, y=40, txt=f"Prof. {prof} - {cfu} cfu" + ("" if effettivi else " - Sovrannumero"))
 
         border_colors = {"verde": (0, 255, 0), "viola":(255, 0, 255), "blu":(0, 0, 255), "bianco":(0, 0, 0)} 
         r, g, b = border_colors[colore]
@@ -911,7 +933,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.rect(x=155, y=45, w=40, h=40, round_corners=True)
         self.image(f"images/{tipo}.png", x=160, y=50, w=30, h=30)
 
-        self.h0(w=2*WIDTH//3, x=0, y=50, txt="Voto finale: " + str(voto), align="C")
+        self.h0(w=2*WIDTH//3, x=0, y=50, txt="Voto finale: " + str(voto) if voto != 1 else "N/A", align="C")
         
         self.image("images/quadrilatero.png", x=0, y=95, w=WIDTH, h=HEIGHT//4+5)
 
@@ -977,8 +999,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.h3(WIDTH, x=20, y=215, txt=f"° Qualità appunti: {appunti} / 5.0")
 
         voto_int = int(voto) if voto != "30L" else 30
-
-        self.h3(WIDTH, x=20, y=235, txt=f"° Qualità studio: {round(num_pomodori/voto_int, 2)}")
+        self.h3(WIDTH, x=20, y=235, txt=f"° Qualità studio: {round(num_pomodori/voto_int, 2) if voto_int != 1 else 'N/A'}")
         self.h4(WIDTH, x=73, y=236.5, txt="# pomodori / 1 voto")
 
         sessioni = [
@@ -1002,7 +1023,10 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
         self.h3(WIDTH, x= 20, y=255, txt=f"° Pomodori in sessione: {int(100*round(in_sessione/num_pomodori, 2))}%")
 
 
-    def report_progetti(self, y, nome1, nome2, github):
+    def report_progetti(self, y, nome1, nome2, github, link=None):
+
+        if link == None:
+            link = f"https://github.com/Crippius/{github}"
 
         self.image("images/quadrilatero.png", x=THIRD, y=y, w=THIRD, h=50)
 
@@ -1013,7 +1037,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
         self.h4(w=THIRD-10, x=THIRD+10, y=y+30, txt=github, align="C")
         self.image("images/github.png", x=THIRD+30-len(github)-1, y=y+34.5, w=7.5, h=7.5)
-        self.link(w=THIRD, x=THIRD, y=y+33, h=10, link=f"https://github.com/Crippius/{github}")
+        self.link(w=THIRD, x=THIRD, y=y+33, h=10, link=link)
 
 
         progetto = f"Progetto di {nome1} {nome2}"

@@ -173,16 +173,14 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     punteggio = 1 + round((voto_api+voto_rl+3*voto_swing)/30, 2)
     pdf.h3(w=WIDTH, x=0, y=190, txt=f"Punteggio aggiunto al voto di laurea: 1+({voto_api}*1+{voto_rl}*1+{voto_swing}*3)/30 = {punteggio}", align="C")
     
-    pdf.report_progetti(y=210, nome1="Ingegneria", nome2="del Software", github="progetto_swing")
+    pdf.report_progetti(y=210, nome1="Ingegneria", nome2="del Software", github="progetto_ingsw", link="https://github.com/TommasoCrippa-Polimi/IS24-AM42")
 
     if voti != None:
         for materia in pdf.voti[pdf.voti.anno == "Terzo"].materia.unique():
             pdf.report_materia(materia)
 
     pdf.add_new_page("Conclusione")
-    
-    media=0
-
+  
     pdf.set_draw_color(0, 255, 0)
     pdf.rect(x=0, y=60, w=HALF+4, h=39, style="D")
     pdf.rect(x=HALF+5, y=100, w=HALF+4, h=39, style="D")
@@ -202,7 +200,7 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     min_pom = float("+inf")
     min_materia = ""
     for mat in pdf.voti.materia.unique():
-        if mat.split(" ")[0] == "Progetto" and mat.split(" ")[-1] != "Informatica":
+        if pdf.final_project(mat) or not pdf.effettivo(mat):
             continue
         temp = sum(pdf.df[pdf.df.materia == mat].pomodori) 
         if temp > max_pom:
@@ -211,10 +209,6 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
         if temp < min_pom:
             min_pom = temp
             min_materia = mat
-        voto = pdf.voti[pdf.voti.materia == mat].iloc[0].voto
-        voto = int(voto) if voto != "30L" else 30
-        media += (voto/30) * pdf.voti[pdf.voti.materia == mat].iloc[0].cfu
-    punteggio += (media/175)*110
 
     pdf.h3(w=HALF+5, x=0, y=60, txt="Materia più studiata:", align="C")
     pdf.h3(w=HALF+5, x=0, y=70, txt=f"{max_materia}", align="C")
@@ -228,11 +222,13 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     min_qual = float("+inf")
     min_materia = ""
     for mat in pdf.voti.materia.unique():
-        if mat.split(" ")[0] == "Progetto" and mat.split(" ")[-1] != "Informatica":
+        if pdf.final_project(mat) or not pdf.effettivo(mat):
             continue
         temp_pom = sum(pdf.df[pdf.df.materia == mat].pomodori)
         temp_voto = pdf.voti[pdf.voti.materia == mat].iloc[0].voto
         temp_voto = int(temp_voto) if temp_voto != "30L" else 30
+        if temp_voto == 1:
+            continue
         temp = temp_pom / temp_voto
         if temp > max_qual:
             max_qual = temp
@@ -253,8 +249,10 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     pdf.line(x1=0, y1=180, x2=WIDTH, y2=180)
 
     pdf.h4(w=FULL, x=0, y=140, txt=f"Voto di laurea:", align="C")
+    punteggio += 110*pdf.get_gpa()
     lode = "" if punteggio < 111 else " e lode"
-    pdf.h0(w=FULL, x=0, y=142, txt=f"{int(round(punteggio, 0))}{lode}", align="C")
+    punteggio = int(round(min(110, punteggio), 0))
+    pdf.h0(w=FULL, x=0, y=142, txt=f"{punteggio}{lode}", align="C")
 
     pdf.h3(w=HALF+5, x=HALF+5, y=185, txt=f"Pomodori fatti di notte:", align="C")
     pdf.h3(w=HALF+5, x=HALF+5, y=195, txt=f"{night_hours} pomodori", align="C")
@@ -277,7 +275,7 @@ def degree(file, voti=None, save_pdf=True, send_pdf=True, commit_pdf=True):
     min_app = float("+inf")
     min_materia = ""
     for mat in pdf.voti.materia.unique():
-        if mat.split(" ")[0] == "Progetto" and mat.split(" ")[-1] != "Informatica":
+        if pdf.final_project(mat) or not pdf.effettivo(mat):
             continue
         temp = pdf.voti[pdf.voti.materia == mat].iloc[0].appunti
         if temp > max_app:
