@@ -5,8 +5,33 @@ from send_email import send_email
 import pandas as pd
 import config
 from git import Repo
+import re
+
+
+def update_readme(pdf):
+    
+    
+    with open('README.md', 'r', encoding='utf-8') as file:
+        content = file.read()
+    
+    pattern = r"\[here!\]\(https:\/\/[^\)]+\)"
+    
+    new_link = pdf.filename.replace(" ", "%20")
+    if pdf.format != "degree":
+        new_link = f"{pdf.year}/{new_link}"
+    new_link =  f"[here!](https://github.com/Crippius/pomodoro-report-generator/blob/main/pdfs/{new_link}.pdf)"
+    
+    updated_content = re.sub(pattern, new_link, content)
+    
+    with open('README.md', 'w', encoding='utf-8') as file:
+        file.write(updated_content)
+    
+    print("README.md has been updated with the new link.")
+
 
 def commit(pdf):
+
+    update_readme(pdf)
 
     date = datetime.now()
 

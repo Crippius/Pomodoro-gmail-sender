@@ -284,7 +284,7 @@ class Pomodoro_Constructor(FPDF): # Main class that is used in this program, inh
 
 
         fe = fm.FontEntry(
-            fname="C:/Users/cripp/Google Drive/programming/repos/pomodoro-gmail-sender/fonts",
+            fname="C:/Users/cripp/Google Drive/programming/repos/pomodoro-report-generator/fonts",
             name='Bebas Neue')
         fm.fontManager.ttflist.insert(0, fe) # or append is fine
         rcParams['font.family'] = fe.name # = 'your custom ttf font name'
