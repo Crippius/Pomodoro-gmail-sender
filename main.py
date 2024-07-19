@@ -25,8 +25,6 @@ def update_readme(pdf):
     
     with open('README.md', 'w', encoding='utf-8') as file:
         file.write(updated_content)
-    
-    print("README.md has been updated with the new link.")
 
 
 def commit(pdf):
@@ -39,6 +37,7 @@ def commit(pdf):
     index = repo.index
     
     index.add(f"{pdf.dir}/{pdf.filename}.pdf")
+    index.add("README.md")
     if pdf.format != "degree":
         index.commit(message=f"Auto-committed {date.month-1 if date.month != 1 else 12}/{str(date.year if date.month != 1 else date.year-1)[-2:]} pomodoro report")
     else:
@@ -98,7 +97,7 @@ Tommaso Crippa"""
         body = f"""
 Ciao!
 
-In allegato è presente il report di pomodori completati di TUTTA la Laurea Triennale
+In allegato è presente il report di pomodori completati durante TUTTA la Laurea Triennale
 Buona lettura!!!
 
 Tommaso Crippa"""        
